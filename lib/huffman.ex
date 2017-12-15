@@ -4,7 +4,7 @@ defmodule Huffman do
   text compression and decompression.
   """
 
-  defp calculate_frequencies(text) do
+  defp build_frequency_mapping(text) do
     text
     |> String.graphemes
     |> Enum.sort
@@ -15,33 +15,23 @@ defmodule Huffman do
     end)
   end
 
-  defp insert_if_has_character(heap, %{freq: _, character: nil}) do
+  defp insert_if_has_character(heap, %{freq: _, character: nil}), do: heap
+  defp insert_if_has_character(heap, %{freq: _, character: _} = child), do: MinHeap.insert(heap, child)
+
+  defp insert_subtree(heap, left, right) do
     heap
+    |> MinHeap.insert(parent_node(left, right))
+    |> insert_if_has_character(left)
+    |> insert_if_has_character(right)
   end
-  defp insert_if_has_character(heap, %{freq: _, character: _} = child) do
-    MinHeap.insert(heap, child)
-  end
+
+  defp parent_node(left, right), do: %{freq: left.freq + right.freq, character: nil}
 
   defp build_heap([], heap), do: heap
-  defp build_heap([child], heap) do
-    heap
-    |> insert_if_has_character(child)
-  end
-  defp build_heap([left, right|tail], heap) do
-    parent = %{
-      freq: left.freq + right.freq,
-      character: nil
-    }
+  defp build_heap([child], heap),do: insert_if_has_character(heap, child)
+  defp build_heap([left, right|tail], heap), do: build_heap([parent_node(left, right)|tail], insert_subtree(heap, left, right))
 
-    new_heap = MinHeap.insert(heap, parent)
-               |> insert_if_has_character(left)
-               |> insert_if_has_character(right)
-    build_heap([parent|tail], new_heap)
-  end
-
-  defp encode_at_index(index, binary_string) when index < 2 do
-    binary_string
-  end
+  defp encode_at_index(index, binary_string) when index < 2, do: binary_string
   defp encode_at_index(index, binary_string) when rem(index, 2) == 1 do
     div(index, 2)
     |> encode_at_index("1" <> binary_string)
@@ -52,7 +42,7 @@ defmodule Huffman do
   end
 
   defp encode(heap, text) do
-    encode_reference = heap |> Enum.map(fn(obj) -> obj.character end)
+    encode_reference = Enum.map(heap, fn(obj) -> obj.character end)
 
     binary_encoding = text
     |> String.graphemes
@@ -62,31 +52,33 @@ defmodule Huffman do
                        |> encode_at_index("")
       acc <> encoded_letter
     end)
-    {binary_encoding, encode_reference} # should it be heap? not sure yet
+    {binary_encoding, encode_reference}
   end
 
-  defp decode_bit(bits, index, heap) do
-    # TODO eww
-    case Enum.at(heap, index) do
-      nil ->
-        case String.first(bits) do
-          "0" ->
-            decode_bit(String.slice(bits, 1..-1), (index * 2), heap)
-          "1" ->
-            decode_bit(String.slice(bits, 1..-1), (index * 2) + 1, heap)
-        end
-      letter ->
-        {letter, bits}
-    end
+  defp visit_heap_node_at(heap, index), do: Enum.at(heap, index)
+
+  defp process_heap_node(nil, bits), do: String.first(bits)
+  defp process_heap_node(letter, bits), do: {letter, bits}
+
+  defp stop_if_leaf_node("0", bits, index, heap), do: walk_down_heap(String.slice(bits, 1..-1), (index * 2), heap)
+  defp stop_if_leaf_node("1", bits, index, heap), do: walk_down_heap(String.slice(bits, 1..-1), (index * 2) + 1, heap)
+  defp stop_if_leaf_node({letter, bits}, _, _, _), do: {letter, bits}
+
+  defp walk_down_heap(bits, index, heap) do
+    heap
+    |> visit_heap_node_at(index)
+    |> process_heap_node(bits)
+    |> stop_if_leaf_node(bits, index, heap)
   end
 
   defp decode(binary_data, heap) do
-    {letter, bits} = decode_bit(binary_data, 1, heap)
+    {letter, bits} = walk_down_heap(binary_data, 1, heap)
     decode(bits, heap, letter)
   end
+
   defp decode("", _, letters), do: letters
   defp decode(binary_data, heap, letters) do
-    {letter, bits} = decode_bit(binary_data, 1, heap)
+    {letter, bits} = walk_down_heap(binary_data, 1, heap)
     decode(bits, heap, letters <> letter)
   end
 
@@ -101,7 +93,7 @@ defmodule Huffman do
   """
   def compress(text) do
     text
-    |> calculate_frequencies
+    |> build_frequency_mapping
     |> build_heap([])
     |> encode(text)
   end
