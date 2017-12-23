@@ -57,11 +57,11 @@ defmodule Huffman do
 
   defp visit_heap_node_at(heap, index), do: Enum.at(heap, index)
 
-  defp process_heap_node(nil, << <<first_bit::1>>, _rest::bitstring >>), do: first_bit
+  defp process_heap_node(nil, << first_bit::1, _rest::bitstring >>), do: first_bit
   defp process_heap_node(letter, bits), do: {letter, bits}
 
-  defp stop_if_leaf_node(0, << <<_::1>>, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2), heap)
-  defp stop_if_leaf_node(1, << <<_::1>>, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2) + 1, heap)
+  defp stop_if_leaf_node(0, << _::1, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2), heap)
+  defp stop_if_leaf_node(1, << _::1, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2) + 1, heap)
   defp stop_if_leaf_node({letter, bits}, _, _, _), do: {letter, bits}
 
   defp walk_down_heap(bits, index, heap) do
@@ -76,7 +76,7 @@ defmodule Huffman do
     decode(bits, heap, letter)
   end
 
-  defp decode("", _, letters), do: letters
+  defp decode(<<>>, _, letters), do: letters
   defp decode(binary_data, heap, letters) do
     {letter, bits} = walk_down_heap(binary_data, 1, heap)
     decode(bits, heap, letters <> letter)
@@ -88,7 +88,7 @@ defmodule Huffman do
   ## Examples
 
       iex> Huffman.compress("aaabbbccc")
-      {"010101111000000", [nil, nil, nil, "b", "c", "a"]}
+      {<<87, 64::size(7)>>, [nil, nil, nil, "b", "c", "a"]}
 
   """
   def compress(text) do
@@ -103,7 +103,7 @@ defmodule Huffman do
 
   ## Examples
 
-      iex> Huffman.decompress("0100001", [nil, nil, nil, "t", "o", "b"])
+      iex> Huffman.decompress(<<33::size(7)>>, [nil, nil, nil, "t", "o", "b"])
       "boot"
 
   """
