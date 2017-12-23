@@ -34,11 +34,11 @@ defmodule Huffman do
   defp encode_at_index(index, binary_string) when index < 2, do: binary_string
   defp encode_at_index(index, binary_string) when rem(index, 2) == 1 do
     div(index, 2)
-    |> encode_at_index("1" <> binary_string)
+    |> encode_at_index(<< <<1::1>>, binary_string::bitstring >>)
   end
   defp encode_at_index(index, binary_string) when rem(index, 2) == 0 do
     div(index, 2)
-    |> encode_at_index("0" <> binary_string)
+    |> encode_at_index(<< <<0::1>>, binary_string::bitstring >>)
   end
 
   defp encode(heap, text) do
@@ -46,22 +46,22 @@ defmodule Huffman do
 
     binary_encoding = text
     |> String.graphemes
-    |> Enum.reduce("", fn(letter, acc) ->
+    |> Enum.reduce(<<>>, fn(letter, acc) ->
       encoded_letter = encode_reference
                        |> Enum.find_index(fn(x)-> x == letter end)
-                       |> encode_at_index("")
-      acc <> encoded_letter
+                       |> encode_at_index(<<>>)
+      << acc::bitstring, encoded_letter::bitstring >>
     end)
     {binary_encoding, encode_reference}
   end
 
   defp visit_heap_node_at(heap, index), do: Enum.at(heap, index)
 
-  defp process_heap_node(nil, bits), do: String.first(bits)
+  defp process_heap_node(nil, << <<first_bit::1>>, _rest::bitstring >>), do: first_bit
   defp process_heap_node(letter, bits), do: {letter, bits}
 
-  defp stop_if_leaf_node("0", bits, index, heap), do: walk_down_heap(String.slice(bits, 1..-1), (index * 2), heap)
-  defp stop_if_leaf_node("1", bits, index, heap), do: walk_down_heap(String.slice(bits, 1..-1), (index * 2) + 1, heap)
+  defp stop_if_leaf_node(0, << <<_::1>>, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2), heap)
+  defp stop_if_leaf_node(1, << <<_::1>>, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2) + 1, heap)
   defp stop_if_leaf_node({letter, bits}, _, _, _), do: {letter, bits}
 
   defp walk_down_heap(bits, index, heap) do
