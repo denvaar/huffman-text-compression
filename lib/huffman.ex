@@ -31,7 +31,7 @@ defmodule Huffman do
   defp build_heap([child], heap),do: insert_if_has_character(heap, child)
   defp build_heap([left, right|tail], heap), do: build_heap([parent_node(left, right)|tail], insert_subtree(heap, left, right))
 
-  defp encode_at_index(index, binary_string) when index < 2, do: binary_string
+  defp encode_at_index(index, binary_string) when index < 1, do: binary_string
   defp encode_at_index(index, binary_string) when rem(index, 2) == 1 do
     div(index, 2)
     |> encode_at_index(<< <<1::1>>, binary_string::bitstring >>)
@@ -41,18 +41,22 @@ defmodule Huffman do
     |> encode_at_index(<< <<0::1>>, binary_string::bitstring >>)
   end
 
-  defp encode(heap, text) do
-    encode_reference = Enum.map(heap, fn(obj) -> obj.character end)
+  defp walk_tree(letter, [head|_tail], index) when head == letter, do: index
+  defp walk_tree(letter, [head|tail], index) when head != letter, do: walk_tree(letter, tail, index + 1)
 
-    binary_encoding = text
-    |> String.graphemes
-    |> Enum.reduce(<<>>, fn(letter, acc) ->
-      encoded_letter = encode_reference
-                       |> Enum.find_index(fn(x)-> x == letter end)
-                       |> encode_at_index(<<>>)
-      << acc::bitstring, encoded_letter::bitstring >>
-    end)
-    {binary_encoding, encode_reference}
+  defp encode_text_from_heap(heap, text) do
+    encode_reference = Enum.map(heap, fn(obj) -> obj.character end) # strip off frequency
+
+    huffman_encoded_binary = text
+      |> String.graphemes
+      |> Enum.reduce(<<>>, fn(letter, acc) ->
+        encoded_character = walk_tree(letter, encode_reference, 0)
+          |> encode_at_index(<<>>)
+
+        << acc::bitstring, encoded_character::bitstring >>
+      end)
+
+    {huffman_encoded_binary, encode_reference}
   end
 
   defp visit_heap_node_at(heap, index), do: Enum.at(heap, index)
@@ -72,13 +76,13 @@ defmodule Huffman do
   end
 
   defp decode(binary_data, heap) do
-    {letter, bits} = walk_down_heap(binary_data, 1, heap)
+    {letter, bits} = walk_down_heap(binary_data, 0, heap)
     decode(bits, heap, letter)
   end
 
   defp decode(<<>>, _, letters), do: letters
   defp decode(binary_data, heap, letters) do
-    {letter, bits} = walk_down_heap(binary_data, 1, heap)
+    {letter, bits} = walk_down_heap(binary_data, 0, heap)
     decode(bits, heap, letters <> letter)
   end
 
@@ -88,14 +92,14 @@ defmodule Huffman do
   ## Examples
 
       iex> Huffman.compress("aaabbbccc")
-      {<<87, 64::size(7)>>, [nil, nil, nil, "b", "c", "a"]}
+      {<<182, 255, 36>>, [nil, nil, nil, "b", "c", "a"]}
 
   """
   def compress(text) do
     text
     |> build_frequency_mapping
     |> build_heap([])
-    |> encode(text)
+    |> encode_text_from_heap(text) #encode(text)
   end
 
   @doc """
@@ -103,7 +107,7 @@ defmodule Huffman do
 
   ## Examples
 
-      iex> Huffman.decompress(<<33::size(7)>>, [nil, nil, nil, "t", "o", "b"])
+      iex> Huffman.decompress(<<178, 3::size(3)>>, [nil, nil, nil, "t", "o", "b"])
       "boot"
 
   """
