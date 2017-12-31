@@ -1,89 +1,94 @@
+require IEx
+
 defmodule Huffman do
   @moduledoc """
   Implementation of Huffman Coding algorithm for
   text compression and decompression.
   """
 
-  defp build_frequency_mapping(text) do
+  def build_frequency_mapping(text) do
     text
     |> String.graphemes
     |> Enum.sort
     |> Enum.chunk_by(fn arg -> arg end)
     |> Enum.sort_by(&length/1)
     |> Enum.reduce([], fn(chunk, acc) ->
-      [%{character: List.first(chunk), freq: length(chunk)}|acc]
+      [%{type: :leaf, character: List.first(chunk), freq: length(chunk)}|acc]
+    end)
+    |> Enum.reverse
+  end
+
+  defp sorted_nodes(nodes) do
+    nodes
+    |> Enum.sort_by(fn obj -> obj.freq end)
+  end
+
+  def build_huffman_tree([]), do: nil
+  def build_huffman_tree([tree]), do: tree
+  def build_huffman_tree([left, right]) do
+    %{type: :node, character: nil, freq: left.freq + right.freq, left: left, right: right}
+  end
+  def build_huffman_tree(nodes) do
+    [first_smallest, second_smallest|rest] = sorted_nodes(nodes) # TODO this is not very optimal
+
+    parent = %{
+      type: :node,
+      character: nil,
+      freq: first_smallest.freq + second_smallest.freq,
+      left: first_smallest,
+      right: second_smallest
+    }
+
+    build_huffman_tree([parent|rest])
+  end
+
+  defp decode_helper(<< <<0::1>>, rest::bitstring >>, %{type: :node, freq: _, character: _, left: left, right: _}) do
+    decode_helper(rest, left)
+  end
+  defp decode_helper(<< <<1::1>>, rest::bitstring >>, %{type: :node, freq: _, character: _, left: _, right: right}) do
+    decode_helper(rest, right)
+  end
+  defp decode_helper(<<>>, tree) do
+    {<<>>, tree.character}
+  end
+  defp decode_helper(encoded_bits, %{type: :leaf, character: character, freq: _freq}) do
+    {encoded_bits, character}
+  end
+
+  defp decode(<<>>, _tree, decoded_text), do: decoded_text
+  defp decode(<< <<_::1>>, rest::bitstring >>, %{type: :leaf, character: c, freq: _freq} = leaf, decoded_text), do: decode(rest, leaf, decoded_text <> c)
+  defp decode(encoded_bits, tree, decoded_text) do
+    case decode_helper(encoded_bits, tree) do
+      {<<>>, decoded_character} ->
+       	decoded_text <> decoded_character
+      {encoded_bits, decoded_character} ->
+        decode(encoded_bits, tree, decoded_text <> decoded_character)
+    end
+  end
+
+  defp encode(huffman_mapping, text) do
+    text
+    |> String.graphemes
+    |> Enum.reduce(<<>>, fn(letter, bits) ->
+      << bits::bitstring, Enum.find(huffman_mapping, fn obj -> obj.character == letter end).encoding::bitstring >>
     end)
   end
 
-  defp insert_if_has_character(heap, %{freq: _, character: nil}), do: heap
-  defp insert_if_has_character(heap, %{freq: _, character: _} = child), do: MinHeap.insert(heap, child)
-
-  defp insert_subtree(heap, left, right) do
-    heap
-    |> MinHeap.insert(parent_node(left, right))
-    |> insert_if_has_character(left)
-    |> insert_if_has_character(right)
+  defp decorate_tree(%{type: :node, left: left_child, right: right_child, character: _, freq: _}, bits) do
+    [decorate_tree(left_child, << bits::bitstring, <<0::1>> >>),
+     decorate_tree(right_child, << bits::bitstring, <<1::1>> >>)]
   end
-
-  defp parent_node(left, right), do: %{freq: left.freq + right.freq, character: nil}
-
-  defp build_heap([], heap), do: heap
-  defp build_heap([child], heap),do: insert_if_has_character(heap, child)
-  defp build_heap([left, right|tail], heap), do: build_heap([parent_node(left, right)|tail], insert_subtree(heap, left, right))
-
-  defp encode_at_index(index, binary_string) when index < 1, do: binary_string
-  defp encode_at_index(index, binary_string) when rem(index, 2) == 1 do
-    div(index, 2)
-    |> encode_at_index(<< <<1::1>>, binary_string::bitstring >>)
+  defp decorate_tree(%{type: :leaf, character: character, freq: _}, <<>>) do
+    [%{character: character, encoding: <<1::1>>}]
   end
-  defp encode_at_index(index, binary_string) when rem(index, 2) == 0 do
-    div(index, 2)
-    |> encode_at_index(<< <<0::1>>, binary_string::bitstring >>)
+  defp decorate_tree(%{type: :leaf, character: character, freq: _}, bits) do
+    [%{character: character, encoding: bits}]
   end
+  defp decorate_tree(nil, <<>>), do: []
 
-  defp walk_tree(letter, [head|_tail], index) when head == letter, do: index
-  defp walk_tree(letter, [head|tail], index) when head != letter, do: walk_tree(letter, tail, index + 1)
-
-  defp encode_text_from_heap(heap, text) do
-    encode_reference = Enum.map(heap, fn(obj) -> obj.character end) # strip off frequency
-
-    huffman_encoded_binary = text
-      |> String.graphemes
-      |> Enum.reduce(<<>>, fn(letter, acc) ->
-        encoded_character = walk_tree(letter, encode_reference, 0)
-          |> encode_at_index(<<>>)
-
-        << acc::bitstring, encoded_character::bitstring >>
-      end)
-
-    {huffman_encoded_binary, encode_reference}
-  end
-
-  defp visit_heap_node_at(heap, index), do: Enum.at(heap, index)
-
-  defp process_heap_node(nil, << first_bit::1, _rest::bitstring >>), do: first_bit
-  defp process_heap_node(letter, bits), do: {letter, bits}
-
-  defp stop_if_leaf_node(0, << _::1, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2), heap)
-  defp stop_if_leaf_node(1, << _::1, rest::bitstring >>, index, heap), do: walk_down_heap(rest, (index * 2) + 1, heap)
-  defp stop_if_leaf_node({letter, bits}, _, _, _), do: {letter, bits}
-
-  defp walk_down_heap(bits, index, heap) do
-    heap
-    |> visit_heap_node_at(index)
-    |> process_heap_node(bits)
-    |> stop_if_leaf_node(bits, index, heap)
-  end
-
-  defp decode(binary_data, heap) do
-    {letter, bits} = walk_down_heap(binary_data, 0, heap)
-    decode(bits, heap, letter)
-  end
-
-  defp decode(<<>>, _, letters), do: letters
-  defp decode(binary_data, heap, letters) do
-    {letter, bits} = walk_down_heap(binary_data, 0, heap)
-    decode(bits, heap, letters <> letter)
+  defp encode_graphemes(tree) do
+    decorate_tree(tree, <<>>)
+    |> List.flatten
   end
 
   @doc """
@@ -92,14 +97,23 @@ defmodule Huffman do
   ## Examples
 
       iex> Huffman.compress("aaabbbccc")
-      {<<182, 255, 36>>, [nil, nil, nil, "b", "c", "a"]}
+      {<<1, 47::size(7)>>,
+       %{character: nil, freq: 9,
+         left: %{character: nil, freq: 6,
+           left: %{character: "a", freq: 3, type: :leaf},
+           right: %{character: "b", freq: 3, type: :leaf}, type: :node},
+         right: %{character: "c", freq: 3, type: :leaf}, type: :node}}
 
   """
   def compress(text) do
-    text
-    |> build_frequency_mapping
-    |> build_heap([])
-    |> encode_text_from_heap(text) #encode(text)
+    tree = text
+      |> build_frequency_mapping
+      |> build_huffman_tree
+
+    {tree
+     |> encode_graphemes
+     |> encode(text),
+     tree}
   end
 
   @doc """
@@ -107,12 +121,12 @@ defmodule Huffman do
 
   ## Examples
 
-      iex> Huffman.decompress(<<178, 3::size(3)>>, [nil, nil, nil, "t", "o", "b"])
+      iex> Huffman.decompress(<<13::size(6)>>, %{character: nil, freq: 4, left: %{character: nil, freq: 2, left: %{character: "b", freq: 1, type: :leaf}, right: %{character: "t", freq: 1, type: :leaf}, type: :node}, right: %{character: "o", freq: 2, type: :leaf}, type: :node})
       "boot"
 
   """
-  def decompress(binary_data, heap) do
+  def decompress(binary_data, tree) do
     binary_data
-    |> decode(heap)
+    |> decode(tree, "")
   end
 end
