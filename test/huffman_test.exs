@@ -50,4 +50,33 @@ defmodule HuffmanTest do
 
     assert Huffman.decompress(encoded_data, heap) == original_text
   end
+
+  test "compresses alphabet correctly" do
+    original_text = "Aa Bb Cc Dd Ee Ff Gg Hh Ii Jj Kk Ll Mm Nn Oo Pp Qq Rr Ss Tt Uu Vv Ww Xx Yy Zz"
+    {encoded_data, heap} = Huffman.compress(original_text)
+
+    assert Huffman.decompress(encoded_data, heap) == original_text
+  end
+
+  test "compresses text for the 27 Amendments correctly" do
+    case File.read('./sample_text/amendments.txt') do
+      {:ok, text} ->
+        {encoded_data, mapping} = Huffman.compress(text)
+        assert Huffman.decompress(encoded_data, mapping) == text
+
+      {:error, _reason} ->
+        ExUnit.Assertions.assert(false, "Trouble opening/reading the file.")
+    end
+  end
+
+  test "compresses text for Beowulf epic poem correctly" do
+    case File.read('./sample_text/beowulf.txt') do
+      {:ok, text} ->
+        {encoded_data, mapping} = Huffman.compress(text)
+        assert Huffman.decompress(encoded_data, mapping) == text
+
+      {:error, _reason} ->
+        ExUnit.Assertions.assert(false, "Trouble opening/reading the file.")
+    end
+  end
 end
