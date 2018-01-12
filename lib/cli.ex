@@ -6,7 +6,7 @@ defmodule Huffman.CLI do
   end
 
   defp parse_arguments(args) do
-    {opts, _, _} =
+    {opts, _args, _invalid} =
       args
       |> OptionParser.parse(switches: [compress: :string, decompress: :string, output_path: :string])
 
@@ -32,9 +32,9 @@ defmodule Huffman.CLI do
 
       OPTIONS
       =================================
-      --compress path/to/text_file.txt --output_path path/to/output_file.huff
+      --compress path/to/text_file.txt --output-path path/to/output_file.huff
 
-      --decompress path/to/compressed_file.huff --output_path path/to/output_file.txt
+      --decompress path/to/compressed_file.huff --output-path path/to/output_file.txt
 
       """
     IO.puts(message)

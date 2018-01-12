@@ -17,12 +17,12 @@ defmodule Huffman.Encoder do
 
   defp bit_width([{_, width} | _]), do: width
 
-  defp assign_ascending_bits([], _bit_value), do: %{}
+  def assign_ascending_bits([], _bit_value), do: %{}
 
-  defp assign_ascending_bits([group], bit_value),
+  def assign_ascending_bits([group], bit_value),
     do: encoding_for_group(group, bit_value, length(group))
 
-  defp assign_ascending_bits([current_group, next_group | remaining_mappings], bit_value) do
+  def assign_ascending_bits([current_group, next_group | remaining_mappings], bit_value) do
     group_length = length(current_group)
     left_shift_amount = bit_width(next_group) - bit_width(current_group)
     next_value = (group_length + bit_value) <<< left_shift_amount
@@ -42,6 +42,7 @@ defmodule Huffman.Encoder do
     |> Enum.map(fn(s) ->
       Enum.sort_by(s, fn({c, _}) -> c end)
     end)
+    |> IO.inspect
     |> assign_ascending_bits(0)
   end
 
