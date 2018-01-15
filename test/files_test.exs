@@ -60,4 +60,16 @@ defmodule Huffman.FilesTest do
   test "compress/decompress utf8-demo.txt" do
     test_file("./sample_text/utf8-demo.txt")
   end
+
+  test "compress/decompress empty.txt" do
+    test_file("./sample_text/empty.txt")
+  end
+
+  test "compress/decompress one_character.txt" do
+    test_file("./sample_text/one_character.txt")
+  end
+
+  test "compress/decompress one_character_repeated.txt" do
+    test_file("./sample_text/one_character_repeated.txt")
+  end
 end
