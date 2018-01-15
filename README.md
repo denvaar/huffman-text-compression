@@ -2,7 +2,7 @@
 
 Implementation of Huffman Coding algorithm for lossless text compression.
 
-I wrote some stuff about this project [here](https://denverpsmith.com/articles/text-compression-with-huffman-coding).
+I wrote some stuff about this project [here](https://denverpsmith.com/articles/exploring-text-compression).
 
 Here are a few results:
 
