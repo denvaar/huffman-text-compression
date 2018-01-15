@@ -22,7 +22,7 @@ It works best on large text files. Small text files actually get larger after co
 # Usage
 
 ### Interactive Elixir console
-```
+```elixir
 iex(1)> {encoded_bits, mapping} = Huffman.compress("hello world")
 {"h'iO",
  %{2 => %{<<0::size(2)>> => "l"},
@@ -35,7 +35,7 @@ iex(2)> Huffman.decompress(encoded_bits, mapping)
 ```
 
 ### Read/Write to file from interactive Elixir console
-```
+```elixir
 iex(1)> Huffman.Files.compress("./sample_text/amendments.txt", "./out.txt.huff")
 "Data written to -> ./out.txt"
 
