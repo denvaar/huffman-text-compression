@@ -1,3 +1,4 @@
+require IEx
 defmodule Huffman.Decoder do
   @moduledoc """
   Implementation of Huffman Coding algorithm
@@ -7,6 +8,8 @@ defmodule Huffman.Decoder do
   defp get_encoded_character(bits, map) do
     map[bits]
   end
+
+  defp process_bits(_bits, _maps, 0), do: {<<>>, <<>>}
 
   defp process_bits(bits, maps, key) do
     << <<b::size(key)>>, remaining::bitstring >> = bits
@@ -19,6 +22,7 @@ defmodule Huffman.Decoder do
 
   @doc """
   """
+  def decode(_encoded_bits, _maps, 0, decoded_symbols), do: decoded_symbols
   def decode(<<>>, _maps, _bit_length, decoded_symbols), do: decoded_symbols
 
   def decode(encoded_bits, maps, bit_length, decoded_symbols) do
@@ -37,7 +41,7 @@ defmodule Huffman.Decoder do
   """
   def prep_map_for_decoding(mappings) do
     mappings
-    |> Enum.to_list
+    |> Enum.to_list()
     |> Enum.sort_by(fn ({_, encoding}) -> bit_size(encoding) end)
     |> Enum.chunk_by(fn ({_, encoding}) -> bit_size(encoding) end)
     |> Enum.reduce(%{}, fn (encodings, map) ->

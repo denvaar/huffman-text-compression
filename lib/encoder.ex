@@ -42,7 +42,6 @@ defmodule Huffman.Encoder do
     |> Enum.map(fn(s) ->
       Enum.sort_by(s, fn({c, _}) -> c end)
     end)
-    |> IO.inspect
     |> assign_ascending_bits(0)
   end
 

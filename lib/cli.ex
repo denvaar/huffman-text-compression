@@ -13,16 +13,16 @@ defmodule Huffman.CLI do
     opts
   end
 
-  defp perform_action([compress: file_path]), do: Huffman.FileTools.compress(file_path)
+  defp perform_action([compress: file_path]), do: Huffman.Files.compress(file_path)
 
   defp perform_action([compress: file_path, output_path: out_file]) do
-    Huffman.FileTools.compress(file_path, out_file)
+    Huffman.Files.compress(file_path, out_file)
   end
 
-  defp perform_action([decompress: file_path]), do: Huffman.FileTools.decompress(file_path)
+  defp perform_action([decompress: file_path]), do: Huffman.Files.decompress(file_path)
 
   defp perform_action([decompress: file_path, output_path: out_file]) do
-    Huffman.FileTools.decompress(file_path, out_file)
+    Huffman.Files.decompress(file_path, out_file)
   end
 
   defp perform_action(_) do
